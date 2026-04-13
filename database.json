@@ -1,0 +1,34 @@
+{
+  "relays": {
+    "relay1": false,
+    "relay2": false,
+    "relay3": false,
+    "relay4": false
+  },
+  "timers": {
+    "timer_id_1": {
+      "relay": "relay1",
+      "action": "ON",
+      "startTime": "18:30",
+      "endTime": "22:00",
+      "days": [true, true, true, true, true, false, false],
+      "active": true
+    }
+  },
+  "DHT11": {
+    "Temperature": 0,
+    "Humidity": 0
+  },
+  "Sensors": {
+    "GasLevel": 0,
+    "Flame": false
+  },
+  "LDR": {
+    "Dark": true,
+    "LightLevel": 0
+  },
+  "Rain": {
+    "Detected": false,
+    "Level": 0
+  }
+}

@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Smart Home Automation with Safety and Relay Controls</title>
+  <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+ <link rel="stylesheet" href="style.css">
+</head>
+  <div class="bg-blobs">
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
+  </div>
+
+  <div class="loading" id="loading">
+    <div class="spinner"></div>
+  </div>
+
+  <div class="container">
+    <div class="header">
+      <div class="top-controls">
+        <div class="control-group">
+          <button class="btn control-btn" id="soundToggle" onclick="toggleSound()" title="Toggle Sound">
+            <i class="fas fa-volume-up"></i>
+          </button>
+        </div>
+        <div class="credentials-section">
+          <button class="btn credentials-btn" onclick="showCredentialsModal()">
+            <i class="fas fa-cog"></i> Settings
+          </button>
+        </div>
+      </div>
+      <h1><i class="fas fa-home"></i>Smart Home Automation with Safety and Relay Controls</h1>
+    </div>
+
+    <div class="card instructions" id="instructionsSection">
+      <h2><i class="fas fa-info-circle"></i> Firebase Setup Instructions</h2>
+      <p>Follow these steps to set up your Firebase Realtime Database:</p>
+      <ol>
+        <li>Go to <a href="https://console.firebase.google.com" target="_blank">Firebase Console</a></li>
+        <li>Create a new project or select existing one</li>
+        <li>Enable Realtime Database (Start in test mode)</li>
+        <li>Copy your Web API Key from Project Settings</li>
+        <li>Copy your Database URL from Realtime Database section</li>
+        <li>Enter credentials below to connect</li>
+      </ol>
+      <p><strong>Database Rules for Testing:</strong></p>
+      <code>{ "rules": { ".read": true, ".write": true } }</code>
+    </div>
+
+    <div class="card" id="configSection">
+      <h2><i class="fas fa-database"></i> Firebase Configuration</h2>
+      <form id="configForm">
+        <div class="form-group">
+          <label for="apiKey"><i class="fas fa-key"></i> Firebase API Key:</label>
+          <input type="password" id="apiKey" placeholder="Enter your Firebase API Key" required>
+        </div>
+        <div class="form-group">
+          <label for="databaseURL"><i class="fas fa-link"></i> Database URL:</label>
+          <input type="url" id="databaseURL" placeholder="https://your-project-id.firebaseio.com" required>
+        </div>
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-plug"></i> Connect to Firebase
+        </button>
+      </form>
+    </div>
+
+    <div class="card" id="relaysSection" style="display: none;">
+      <h2><i class="fas fa-toggle-on"></i> Relay Controls</h2>
+      <div class="grid" id="relaysContainer"></div>
+    </div>
+
+    <div class="card" id="dhtSection" style="display: none;">
+      <h2><i class="fas fa-thermometer-half"></i> DHT Sensor</h2>
+      <div class="dht-grid">
+        <div class="dht-card temperature">
+          <div class="dht-icon"><i class="fas fa-thermometer-half"></i></div>
+          <div class="dht-label">Temperature</div>
+          <div class="dht-value" id="tempValue">--</div>
+          <div class="dht-unit">°C</div>
+          <div class="dht-status" id="tempStatus">Waiting for data...</div>
+        </div>
+        <div class="dht-card humidity">
+          <div class="dht-icon"><i class="fas fa-tint"></i></div>
+          <div class="dht-label">Humidity</div>
+          <div class="dht-value" id="humValue">--</div>
+          <div class="dht-unit">%</div>
+          <div class="dht-status" id="humStatus">Waiting for data...</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card" id="sensorsSection" style="display: none;">
+      <h2><i class="fas fa-microchip"></i> Sensors Monitor</h2>
+      <div class="sensors-grid">
+
+        <!-- MQ2 Gas Sensor -->
+        <div class="sensor-card mq2-card">
+          <div class="sensor-header">
+            <div class="sensor-icon-wrap mq2-icon">
+              <i class="fas fa-smog"></i>
+            </div>
+            <div class="sensor-badge" id="mq2Badge">SAFE</div>
+          </div>
+          <div class="sensor-title">MQ2 Gas / Smoke</div>
+          <div class="sensor-subtitle">Analog Gas Detector</div>
+          <div class="sensor-value-row">
+            <span class="sensor-big-value" id="mq2Value">--</span>
+            <span class="sensor-big-unit">/4095</span>
+          </div>
+          <div class="sensor-bar-wrap">
+            <div class="sensor-bar-track">
+              <div class="sensor-bar-fill" id="mq2Bar" style="width:0%"></div>
+            </div>
+            <div class="sensor-bar-labels">
+              <span>Safe</span><span>Warning</span><span>Danger</span>
+            </div>
+          </div>
+          <div class="sensor-status" id="mq2Status">Waiting for data...</div>
+        </div>
+
+        <!-- Flame Sensor -->
+        <div class="sensor-card flame-card" id="flameCard">
+          <div class="sensor-header">
+            <div class="sensor-icon-wrap flame-icon" id="flameIconWrap">
+              <i class="fas fa-fire-alt"></i>
+            </div>
+            <div class="sensor-badge flame-badge" id="flameBadge">NO FLAME</div>
+          </div>
+          <div class="sensor-title">Flame Sensor</div>
+          <div class="sensor-subtitle">Fire Detection Module</div>
+          <div class="flame-display" id="flameDisplay">
+            <div class="flame-circle" id="flameCircle">
+              <i class="fas fa-fire-alt" id="flameIcon"></i>
+            </div>
+            <div class="flame-text" id="flameText">No Flame Detected</div>
+          </div>
+          <div class="sensor-status" id="flameStatus">Waiting for data...</div>
+        </div>
+
+        <!-- LDR Light Sensor -->
+        <div class="sensor-card ldr-card" id="ldrCard">
+          <div class="sensor-header">
+            <div class="sensor-icon-wrap ldr-icon" id="ldrIconWrap">
+              <i class="fas fa-sun" id="ldrIconEl"></i>
+            </div>
+            <div class="sensor-badge ldr-badge" id="ldrBadge">BRIGHT</div>
+          </div>
+          <div class="sensor-title">LDR Light Sensor</div>
+          <div class="sensor-subtitle">Ambient Light Detector</div>
+          <div class="ldr-display">
+            <div class="ldr-scene" id="ldrScene">
+              <div class="ldr-orb" id="ldrOrb">
+                <i class="fas fa-sun" id="ldrOrbIcon"></i>
+              </div>
+              <div class="ldr-stars" id="ldrStars">
+                <span></span><span></span><span></span><span></span><span></span>
+              </div>
+            </div>
+            <div class="ldr-level-row">
+              <span class="ldr-level-label">Light Level:</span>
+              <span class="ldr-level-value" id="ldrLevelValue">--</span>
+            </div>
+            <div class="ldr-text" id="ldrText">Waiting for data...</div>
+          </div>
+          <div class="sensor-status" id="ldrStatus">Waiting for data...</div>
+        </div>
+
+        <!-- Rain Sensor -->
+        <div class="sensor-card rain-card" id="rainCard">
+          <div class="sensor-header">
+            <div class="sensor-icon-wrap rain-icon" id="rainIconWrap">
+              <i class="fas fa-cloud-rain" id="rainIconEl"></i>
+            </div>
+            <div class="sensor-badge rain-badge" id="rainBadge">DRY</div>
+          </div>
+          <div class="sensor-title">Rain Sensor</div>
+          <div class="sensor-subtitle">Moisture Detection</div>
+          <div class="rain-display">
+            <div class="rain-visual" id="rainVisual">
+              <div class="cloud-wrap">
+                <i class="fas fa-cloud"></i>
+                <div class="rain-drops" id="rainDrops"></div>
+              </div>
+            </div>
+            <div class="sensor-value-row">
+              <span class="sensor-big-value" id="rainLevelValue">--</span>
+              <span class="sensor-big-unit">/4095</span>
+            </div>
+            <div class="rain-text" id="rainText">Waiting for data...</div>
+          </div>
+          <div class="sensor-status" id="rainStatus">Waiting for data...</div>
+        </div>
+
+      </div>
+    </div>
+
+    <div class="card" id="timersSection" style="display: none;">
+      <h2><i class="fas fa-clock"></i> Timer Management</h2>
+      <div class="timezone-info">
+        <i class="fas fa-map-marker-alt"></i> All times are in Indian Standard Time (IST)
+        <br>Current Time: <span id="currentTime"></span>
+      </div>
+      <button class="btn btn-success" onclick="openTimerModal()">
+        <i class="fas fa-plus"></i> Add Timer
+      </button>
+      <div class="next-timer" id="nextTimer"></div>
+      <div class="grid" id="timersContainer"></div>
+    </div>
+  </div>
+
+  <!-- Timer Modal -->
+  <div id="timerModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modalTitle"><i class="fas fa-clock"></i> Add New Timer</h3>
+        <button class="close" onclick="closeTimerModal()">×</button>
+      </div>
+      <form id="timerForm">
+        <div class="form-group">
+          <label for="timerRelay"><i class="fas fa-toggle-on"></i> Select Relay:</label>
+          <select id="timerRelay" required>
+            <option value="">Choose a relay...</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="timerAction"><i class="fas fa-power-off"></i> Action:</label>
+          <select id="timerAction" required>
+            <option value="">Select action...</option>
+            <option value="ON">Turn ON</option>
+            <option value="OFF">Turn OFF</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="timerStartTime"><i class="fas fa-play"></i> Start Time:</label>
+          <input type="time" id="timerStartTime" required>
+        </div>
+        <div class="form-group">
+          <label for="timerEndTime"><i class="fas fa-stop"></i> End Time (Optional):</label>
+          <input type="time" id="timerEndTime">
+        </div>
+        <div class="form-group">
+          <label><i class="fas fa-calendar-alt"></i> Active Days:</label>
+          <div class="days-grid">
+            <div class="day-checkbox" onclick="toggleDay(0)">
+              <input type="checkbox" id="day0">
+              <label for="day0">Mon</label>
+            </div>
+            <div class="day-checkbox" onclick="toggleDay(1)">
+              <input type="checkbox" id="day1">
+              <label for="day1">Tue</label>
+            </div>
+            <div class="day-checkbox" onclick="toggleDay(2)">
+              <input type="checkbox" id="day2">
+              <label for="day2">Wed</label>
+            </div>
+            <div class="day-checkbox" onclick="toggleDay(3)">
+              <input type="checkbox" id="day3">
+              <label for="day3">Thu</label>
+            </div>
+            <div class="day-checkbox" onclick="toggleDay(4)">
+              <input type="checkbox" id="day4">
+              <label for="day4">Fri</label>
+            </div>
+            <div class="day-checkbox" onclick="toggleDay(5)">
+              <input type="checkbox" id="day5">
+              <label for="day5">Sat</label>
+            </div>
+            <div class="day-checkbox" onclick="toggleDay(6)">
+              <input type="checkbox" id="day6">
+              <label for="day6">Sun</label>
+            </div>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-save"></i> Save Timer
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <!-- Credentials Modal -->
+  <div id="credentialsModal" class="modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3><i class="fas fa-cog"></i> Change Firebase Credentials</h3>
+        <button class="close" onclick="closeCredentialsModal()">×</button>
+      </div>
+      <form id="credentialsForm">
+        <div class="form-group">
+          <label for="newApiKey"><i class="fas fa-key"></i> New Firebase API Key:</label>
+          <input type="password" id="newApiKey" placeholder="Enter new API Key" required>
+        </div>
+        <div class="form-group">
+          <label for="newDatabaseURL"><i class="fas fa-link"></i> New Database URL:</label>
+          <input type="url" id="newDatabaseURL" placeholder="https://your-project-id.firebaseio.com" required>
+        </div>
+        <button type="submit" class="btn btn-primary">
+          <i class="fas fa-sync"></i> Update Credentials
+        </button>
+      </form>
+    </div>
+  </div>
+
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-database-compat.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.29.4/moment.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/moment-timezone/0.5.40/moment-timezone-with-data.min.js"></script>
+  <script src="script.js"></script>
+</body>
+</html>
