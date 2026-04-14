@@ -429,22 +429,98 @@ body {
   background: white;
 }
 
-.timer-card.active {
-  border-color: #4caf50;
-  background: linear-gradient(
-    135deg,
-    rgba(76, 175, 80, 0.1) 0%,
-    rgba(76, 175, 80, 0.05) 100%
-  );
+.timer-card {
+  position: relative;
+  background: var(--card-bg);
+  backdrop-filter: blur(25px);
+  -webkit-backdrop-filter: blur(25px);
+  border-radius: 24px;
+  padding: 25px;
+  border: 1px solid var(--card-border);
+  transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  overflow: hidden;
+  box-shadow: var(--card-shadow);
 }
 
-.timer-card.inactive {
-  border-color: #ff9800;
-  background: linear-gradient(
-    135deg,
-    rgba(255, 152, 0, 0.1) 0%,
-    rgba(255, 152, 0, 0.05) 100%
-  );
+.timer-card:hover {
+  transform: translateY(-8px);
+  border-color: var(--accent-primary);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+}
+
+.timer-card h4 {
+  font-size: 1.3em;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  letter-spacing: -0.5px;
+}
+
+.timer-card p {
+  margin: 5px 0;
+  color: var(--text-secondary);
+  font-size: 1em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.timer-card p i {
+  width: 20px;
+  color: var(--accent-primary);
+  text-align: center;
+}
+
+.timer-badge {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  padding: 6px 12px;
+  border-radius: 20px;
+  font-size: 0.7em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+}
+
+.timer-badge.active {
+  background: rgba(0, 242, 254, 0.15);
+  color: #00f2fe;
+  border: 1px solid rgba(0, 242, 254, 0.3);
+  box-shadow: 0 0 15px rgba(0, 242, 254, 0.2);
+  animation: badgeGlow 2s infinite alternate;
+}
+
+.timer-badge.inactive {
+  background: rgba(255, 179, 71, 0.1);
+  color: #ffb347;
+  border: 1px solid rgba(255, 179, 71, 0.2);
+}
+
+@keyframes badgeGlow {
+  from { opacity: 0.7; box-shadow: 0 0 5px rgba(0, 242, 254, 0.1); }
+  to { opacity: 1; box-shadow: 0 0 20px rgba(0, 242, 254, 0.4); }
+}
+
+.timer-actions {
+  display: flex;
+  gap: 12px;
+  margin-top: 10px;
+  padding-top: 15px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.btn-edit, .btn-danger {
+  padding: 10px 18px;
+  font-size: 0.85em;
+  font-weight: 700;
+  border-radius: 12px;
 }
 
 .status {
@@ -527,6 +603,16 @@ body {
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: white;
+  width: 100%;
+  padding: 12px;
+  border-radius: 12px;
+  font-family: inherit;
+  font-size: 1rem;
+}
+
+.modal-content option {
+  background-color: #1a1b2e;
+  color: white;
 }
 
 .close {
@@ -577,19 +663,115 @@ body {
   border-color: #667eea;
 }
 
+.time-row {
+  display: flex;
+  gap: 15px;
+  width: 100%;
+}
+
+.time-row .form-group {
+  flex: 1;
+}
+
 .day-checkbox input {
   display: none;
 }
 
-.next-timer {
-  background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
-  padding: 20px;
-  border-radius: 15px;
-  margin-bottom: 20px;
-  text-align: center;
+.timer-management-header {
+  margin-bottom: 30px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.digital-clock-widget {
+  background: rgba(255, 255, 255, 0.05);
+  padding: 25px;
+  border-radius: 25px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  position: relative;
+  overflow: hidden;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.2);
+}
+
+.digital-clock-widget::before {
+  content: "";
+  position: absolute;
+  top: -50%;
+  left: -50%;
+  width: 200%;
+  height: 200%;
+  background: radial-gradient(circle, rgba(0, 242, 254, 0.05) 0%, transparent 70%);
+  pointer-events: none;
+}
+
+.clock-icon {
+  font-size: 1.2em;
+  color: var(--accent-primary);
+  margin-bottom: 10px;
+}
+
+.time-main {
+  font-family: 'Inter', sans-serif;
+  font-size: 3.5em;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1;
+  display: flex;
+  align-items: baseline;
+  gap: 15px;
+  text-shadow: 0 0 30px rgba(0, 242, 254, 0.3);
+}
+
+.timezone-badge {
+  font-size: 0.25em;
+  background: var(--accent-primary);
+  color: #000;
+  padding: 4px 10px;
+  border-radius: 8px;
+  font-weight: 900;
+  vertical-align: middle;
+}
+
+.date-sub {
+  margin-top: 10px;
+  font-size: 1.1em;
+  color: var(--text-secondary);
   font-weight: 600;
-  color: #333;
-  border: 2px solid rgba(255, 255, 255, 0.3);
+  letter-spacing: 2px;
+}
+
+.timer-controls-row {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  flex-wrap: wrap;
+}
+
+.next-timer-mini {
+  flex: 1;
+  min-width: 250px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 12px 20px;
+  border-radius: 15px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  color: var(--text-secondary);
+  font-size: 0.9em;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: all 0.3s ease;
+}
+
+.next-timer-mini:empty {
+  display: none;
+}
+
+.next-timer-mini strong {
+  color: var(--accent-primary);
 }
 
 .empty-state {

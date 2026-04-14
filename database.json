@@ -24,7 +24,7 @@
     "Flame": false
   },
   "LDR": {
-    "Dark": true,
+    "Detected": true,
     "LightLevel": 0
   },
   "Rain": {

@@ -33,9 +33,11 @@ function hideLoading() {
 // Update current time display
 function updateCurrentTime() {
   const now = moment().tz(IST_TIMEZONE);
-  document.getElementById("currentTime").textContent = now.format(
-    "DD/MM/YYYY HH:mm:ss",
-  );
+  const currentTimeEl = document.getElementById("currentTime");
+  const currentDateEl = document.getElementById("currentDate");
+  
+  if (currentTimeEl) currentTimeEl.textContent = now.format("HH:mm:ss");
+  if (currentDateEl) currentDateEl.textContent = now.format("dddd, DD MMMM YYYY");
 }
 
 // Initialize app
@@ -105,6 +107,7 @@ function initializeFirebase(apiKey, databaseURL) {
     loadData();
     startTimerScheduler();
     hideLoading();
+    renderTimers();
   } catch (error) {
     hideLoading();
     alert("Firebase connection failed: " + error.message);
@@ -219,13 +222,17 @@ function loadData() {
 
     flameStatus.textContent = "Live ●";
 
-    // Flame detected: value = true OR 1 OR "1" OR "DETECTED"
-    const detected =
-      val === true ||
-      val === 1 ||
-      val === "1" ||
-      String(val).toUpperCase() === "DETECTED" ||
-      String(val).toUpperCase() === "TRUE";
+    // Flame detected: handles true/false, 0/1, string "DETECTED", or analog values < 500
+    // (Flame sensors usually send LOW/0 when active, or a small analog value)
+    let detected = false;
+    if (typeof val === 'object' && val !== null) {
+      detected = val.Detected === true || val.Detected === 1 || String(val.Detected).toUpperCase() === "DETECTED";
+    } else {
+      detected = val === true || val === 1 || val === "1" || 
+                 String(val).toUpperCase() === "DETECTED" || 
+                 String(val).toUpperCase() === "TRUE" ||
+                 (typeof val === 'number' && val < 500 && val > 0);
+    }
 
     if (detected) {
       flameCard.classList.add("detected-card");
@@ -264,7 +271,6 @@ function loadData() {
     const ldrIconEl = document.getElementById("ldrIconEl");
     const ldrIconWrap = document.getElementById("ldrIconWrap");
     const ldrBadge = document.getElementById("ldrBadge");
-    const ldrBadgeEl = document.getElementById("ldrBadge");
     const ldrScene = document.getElementById("ldrScene");
     const ldrStars = document.getElementById("ldrStars");
     const ldrText = document.getElementById("ldrText");
@@ -281,12 +287,19 @@ function loadData() {
 
     ldrStatus.textContent = "Live ●";
 
-    // Dark = true means no light (dark environment)
-    // LightLevel: 0 = bright/light detected, 1 = dark (some sensors invert)
-    const isDark =
-      data.Dark === true || data.Dark === "true" || data.LightLevel === 1;
-    const levelDisplay =
-      data.LightLevel !== undefined ? data.LightLevel : isDark ? 1 : 0;
+    // Detected = true means no light (dark environment detected)
+    // Handle both object { Detected, LightLevel } and simple values
+    let isDark = false;
+    let levelDisplay = 0;
+
+    if (typeof data === 'object' && data !== null) {
+      isDark = data.Detected === true || data.Detected === "true" || data.LightLevel === 1 || (data.LightLevel > 500);
+      levelDisplay = data.LightLevel !== undefined ? data.LightLevel : (isDark ? 1 : 0);
+    } else {
+      // If data is a simple value (number or boolean)
+      isDark = data === true || data === "true" || data === 1 || (typeof data === 'number' && data > 500);
+      levelDisplay = typeof data === 'number' ? data : (isDark ? 1 : 0);
+    }
 
     ldrLevelValue.textContent = levelDisplay;
 
@@ -338,9 +351,17 @@ function loadData() {
       return;
     }
 
-    rainStatus.textContent = "Live ●";
-    const isRaining = data.Detected === true;
-    const level = data.Level || 0;
+    let isRaining = false;
+    let level = 0;
+
+    if (typeof data === 'object' && data !== null) {
+      isRaining = data.Detected === true || data.Detected === 1 || data.Detected === "true" || data.Level === 1;
+      level = data.Level !== undefined ? data.Level : (isRaining ? 1 : 0);
+    } else {
+      isRaining = data === true || data === "true" || data === 1;
+      level = typeof data === 'number' ? data : (isRaining ? 1 : 0);
+    }
+    
     rainLevelValue.textContent = level;
 
     if (isRaining) {
@@ -464,12 +485,19 @@ function renderTimers() {
       : "None";
 
     const div = document.createElement("div");
-    div.className = `timer-card ${timer.active ? "active" : "inactive"}`;
+    div.className = "timer-card";
+    const statusClass = timer.active ? "active" : "inactive";
+    const statusText = timer.active ? "Active" : "Inactive";
+    
     div.innerHTML = `
-      <h4><i class="fas fa-toggle-on"></i> ${timer.relay} - ${timer.action}</h4>
-      <p><i class="fas fa-clock"></i> ${timer.startTime}${timer.endTime ? " to " + timer.endTime : ""}</p>
-      <p><i class="fas fa-calendar-alt"></i> ${activeDays}</p>
-      <div style="margin-top: 15px;">
+      <div class="timer-badge ${statusClass}">${statusText}</div>
+      <h4><i class="fas fa-toggle-on"></i> ${timer.relay}</h4>
+      <div class="timer-details">
+        <p><i class="fas fa-sign-in-alt"></i> Action: <strong>${timer.action}</strong></p>
+        <p><i class="fas fa-clock"></i> ${timer.startTime}${timer.endTime ? " — " + timer.endTime : " (No End Time)"}</p>
+        <p><i class="fas fa-calendar-alt"></i> ${activeDays}</p>
+      </div>
+      <div class="timer-actions">
         <button class="btn btn-edit" onclick="editTimer('${id}')">
           <i class="fas fa-edit"></i> Edit
         </button>
@@ -684,17 +712,26 @@ document.getElementById("timerForm").addEventListener("submit", (e) => {
   const endTime = document.getElementById("timerEndTime").value;
 
   // Validate inputs
-  if (
-    !relay ||
-    relay === "undefined" ||
-    relay.trim() === "" ||
-    !action ||
-    !startTime ||
-    !relays[relay]
-  ) {
+  if (!relay || relay === "undefined" || relay.trim() === "" || !action || !startTime) {
     hideLoading();
-    alert("Please select a valid relay, action, and start time.");
+    alert("Please select a relay, action, and start time.");
     return;
+  }
+
+  // Ensure relay still exists in local data
+  if (relays[relay] === undefined) {
+    console.warn(`Relay ${relay} not found in state, but attempting to save anyway...`);
+  }
+
+  // Validation: Start Time < End Time
+  if (startTime && endTime) {
+    const startNum = parseInt(startTime.replace(":", ""));
+    const endNum = parseInt(endTime.replace(":", ""));
+    if (endNum <= startNum) {
+      hideLoading();
+      alert("End time must be LATER than start time.");
+      return;
+    }
   }
 
   const days = [];
@@ -799,7 +836,7 @@ window.onclick = function (event) {
 
 // Timer scheduler with IST timezone
 function startTimerScheduler() {
-  setInterval(() => {
+  const updateSchedule = () => {
     if (!db) return;
 
     const now = moment().tz(IST_TIMEZONE);
@@ -898,17 +935,17 @@ function startTimerScheduler() {
     if (nextTimer && nextTimerDate) {
       const timeUntil = nextTimerDate.fromNow();
       nextTimerEl.innerHTML = `
-        <i class="fas fa-clock"></i> 
-        <strong>Next Timer:</strong> ${nextTimer.relay} will turn 
-        <strong>${nextTimer.action}</strong> at 
-        <strong>${nextTimerDate.format("DD/MM/YYYY HH:mm")}</strong> 
-        (${timeUntil})
+        <i class="fas fa-calendar-check"></i> 
+        <span>Next: <strong>${nextTimer.relay}</strong> — <strong>${nextTimer.action}</strong> at <strong>${nextTimerDate.format("HH:mm")}</strong> (${timeUntil})</span>
       `;
+      nextTimerEl.style.display = "flex";
     } else {
-      nextTimerEl.innerHTML = `
-        <i class="fas fa-info-circle"></i> 
-        No upcoming timers scheduled
-      `;
+      nextTimerEl.innerHTML = "";
+      nextTimerEl.style.display = "none";
     }
-  }, 30000); // Check every 30 seconds
+  }
+
+  // Run immediately then every 30s
+  updateSchedule();
+  setInterval(updateSchedule, 30000);
 }
