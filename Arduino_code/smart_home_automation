@@ -1,0 +1,127 @@
+#include <WiFi.h>
+#include <FirebaseESP32.h>
+#include "DHT.h"
+
+// ================= WIFI =================
+#define WIFI_SSID "Redmi K50i"
+#define WIFI_PASSWORD "11022005"
+
+// ================= FIREBASE =================
+#define API_KEY "AIzaSyALrDqqRLya3F7M7xGf4s8TcB_YPRvmV6A"
+#define DATABASE_URL "https://device-control-10b91-default-rtdb.asia-southeast1.firebasedatabase.app"
+
+#define USER_EMAIL "gninave@gmail.com"
+#define USER_PASSWORD "12345678"
+
+// ================= FINAL PINS =================
+#define RAIN_PIN   27
+#define LDR_PIN    26
+#define LED_PIN    25
+#define DHTPIN     4
+
+#define MQ2_PIN    34
+#define FLAME_PIN  14  
+
+#define DHTTYPE DHT11
+DHT dht(DHTPIN, DHTTYPE);
+
+// Firebase
+FirebaseData fbdo;
+FirebaseAuth auth;
+FirebaseConfig config;
+
+// LDR
+bool isDetected = false;
+bool lastState = false;
+
+// Rain
+bool rainDetected = false;
+bool lastRain = false;
+
+void setup() {
+  Serial.begin(115200);
+
+  pinMode(LED_PIN, OUTPUT);
+  digitalWrite(LED_PIN, LOW);
+
+  pinMode(LDR_PIN, INPUT);
+  pinMode(RAIN_PIN, INPUT);
+  pinMode(FLAME_PIN, INPUT);
+
+  // WiFi
+  WiFi.begin(WIFI_SSID, WIFI_PASSWORD);
+  while (WiFi.status() != WL_CONNECTED) delay(100);
+
+  // Firebase
+  config.api_key = API_KEY;
+  config.database_url = DATABASE_URL;
+
+  auth.user.email = USER_EMAIL;
+  auth.user.password = USER_PASSWORD;
+
+  Firebase.begin(&config, &auth);
+  Firebase.reconnectWiFi(true);
+
+  dht.begin();
+}
+
+void loop() {
+
+  // ================= LDR =================
+  int ldrState = digitalRead(LDR_PIN);
+  isDetected = (ldrState == LOW);
+
+  if (isDetected != lastState) {
+
+    if (isDetected) {
+      digitalWrite(LED_PIN, LOW);
+    } else {
+      digitalWrite(LED_PIN, HIGH);
+    }
+
+    int level = isDetected ? 1 : 0;
+
+    Firebase.setBool(fbdo, "/LDR/Detected", isDetected);
+    Firebase.setInt(fbdo, "/LDR/Level", level);
+
+    lastState = isDetected;
+  }
+
+  // ================= RAIN =================
+  rainDetected = (digitalRead(RAIN_PIN) == LOW);
+
+  if (rainDetected != lastRain) {
+
+    int level = rainDetected ? 1 : 0;
+
+    Firebase.setBool(fbdo, "/Rain/Detected", rainDetected);
+    Firebase.setInt(fbdo, "/Rain/Level", level);
+
+    lastRain = rainDetected;
+  }
+
+  // ================= DHT =================
+  static unsigned long lastDHT = 0;
+
+  if (millis() - lastDHT > 2000) {
+    lastDHT = millis();
+
+    float h = dht.readHumidity();
+    float t = dht.readTemperature();
+
+    if (!isnan(h) && !isnan(t)) {
+      Firebase.setFloat(fbdo, "/DHT11/Temperature", t);
+      Firebase.setFloat(fbdo, "/DHT11/Humidity", h);
+    }
+  }
+
+  // ================= MQ2 =================
+  int gasValue = analogRead(MQ2_PIN);
+  Firebase.setInt(fbdo, "/Sensors/GasLevel", gasValue);
+
+  // ================= FLAME =================
+  bool flameDetected = (digitalRead(FLAME_PIN) == LOW);
+  Firebase.setBool(fbdo, "/Sensors/Flame", flameDetected);
+
+  delay(50);
+}
